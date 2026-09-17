@@ -1,6 +1,13 @@
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
+/*
+ * CSS oficial do MapLibre. Fica aqui (e não no componente) porque o import
+ * dentro do módulo TS era resolvido para node_modules/.vite/deps/
+ * maplibre-gl.css?direct, caminho que não existe e devolvia 404 no preview,
+ * deixando o mapa sem os estilos de canvas/marcadores.
+ */
+@import "maplibre-gl/dist/maplibre-gl.css";
 
 @custom-variant dark (&:is(.dark *));
 

@@ -1,6 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
 
 export interface PontoMapa {
   lat: number;
@@ -28,10 +27,12 @@ const CORES: Record<PontoMapa["cor"], string> = {
  * contraste no teste lado a lado com "liberty" e "positron" (este último quase
  * invisível no celular), então ruas, nomes e pontos de referência ficam
  * legíveis.
+ *
+ * O CSS da maplibre é importado em src/styles.css (e não aqui), porque o
+ * import dentro do módulo TS era resolvido para a pasta do otimizador do Vite
+ * e devolvia 404 no preview.
  */
 const ESTILO = "https://tiles.openfreemap.org/styles/bright";
-
-
 
 export default function Mapa({ posicao, pontos = [], recentralizarToken = 0 }: Props) {
   const container = useRef<HTMLDivElement | null>(null);
@@ -39,22 +40,91 @@ export default function Mapa({ posicao, pontos = [], recentralizarToken = 0 }: P
   const marcadorMotoboy = useRef<maplibregl.Marker | null>(null);
   const marcadores = useRef<maplibregl.Marker[]>([]);
   const jaCentralizou = useRef(false);
+  /** Centro/zoom preservados entre recriações do mapa (perda de contexto WebGL). */
+  const ultimaVista = useRef<{ center: [number, number]; zoom: number; bearing: number; pitch: number } | null>(
+    null,
+  );
+  /** Incrementa para forçar a recriação do mapa quando o contexto WebGL volta. */
+  const [versao, setVersao] = useState(0);
+
+  const recriar = useCallback(() => setVersao((valor) => valor + 1), []);
 
   useEffect(() => {
-    if (!container.current || mapa.current) return;
-    mapa.current = new maplibregl.Map({
+    if (!container.current) return;
+
+    const vista = ultimaVista.current;
+    const instancia = new maplibregl.Map({
       container: container.current,
       style: ESTILO,
-      center: [posicao?.lng ?? -46.6333, posicao?.lat ?? -23.5505],
-      zoom: posicao ? 15 : 11,
+      center: vista?.center ?? [posicao?.lng ?? -46.6333, posicao?.lat ?? -23.5505],
+      zoom: vista?.zoom ?? (posicao ? 15 : 11),
+      bearing: vista?.bearing ?? 0,
+      pitch: vista?.pitch ?? 0,
       attributionControl: false,
     });
+    mapa.current = instancia;
+    // Marcadores pertencem à instância antiga; serão recriados pelos efeitos.
+    marcadorMotoboy.current = null;
+    marcadores.current = [];
+
+    const guardarVista = () => {
+      const centro = instancia.getCenter();
+      ultimaVista.current = {
+        center: [centro.lng, centro.lat],
+        zoom: instancia.getZoom(),
+        bearing: instancia.getBearing(),
+        pitch: instancia.getPitch(),
+      };
+    };
+    instancia.on("moveend", guardarVista);
+    instancia.on("zoomend", guardarVista);
+
+    // Registro de falhas de carregamento/renderização (tiles, glyphs, sprites).
+    const aoErrar = (evento: maplibregl.ErrorEvent) => {
+      console.error("[mapa] erro do MapLibre:", evento.error?.message ?? evento.error, evento);
+    };
+    instancia.on("error", aoErrar);
+
+    const canvas = instancia.getCanvas();
+
+    const aoPerderContexto = (evento: Event) => {
+      // preventDefault permite que o navegador restaure o contexto depois.
+      evento.preventDefault();
+      guardarVista();
+      console.warn("[mapa] contexto WebGL perdido; aguardando restauração.");
+    };
+    const aoRestaurarContexto = () => {
+      console.warn("[mapa] contexto WebGL restaurado; recriando o mapa.");
+      recriar();
+    };
+    canvas.addEventListener("webglcontextlost", aoPerderContexto);
+    canvas.addEventListener("webglcontextrestored", aoRestaurarContexto);
+
+    // Ao voltar para a aba/preview, a área pode ter mudado de tamanho.
+    const aoVoltar = () => {
+      if (document.visibilityState !== "visible") return;
+      instancia.resize();
+      const gl = canvas.getContext("webgl2") ?? canvas.getContext("webgl");
+      if (gl && gl.isContextLost()) {
+        console.warn("[mapa] contexto WebGL ainda perdido ao reativar; recriando o mapa.");
+        recriar();
+      }
+    };
+    document.addEventListener("visibilitychange", aoVoltar);
+    window.addEventListener("focus", aoVoltar);
+    window.addEventListener("pageshow", aoVoltar);
+
     return () => {
-      mapa.current?.remove();
-      mapa.current = null;
+      canvas.removeEventListener("webglcontextlost", aoPerderContexto);
+      canvas.removeEventListener("webglcontextrestored", aoRestaurarContexto);
+      document.removeEventListener("visibilitychange", aoVoltar);
+      window.removeEventListener("focus", aoVoltar);
+      window.removeEventListener("pageshow", aoVoltar);
+      instancia.remove();
+      if (mapa.current === instancia) mapa.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [versao, recriar]);
 
   useEffect(() => {
     const instancia = mapa.current;
@@ -75,7 +145,7 @@ export default function Mapa({ posicao, pontos = [], recentralizarToken = 0 }: P
       jaCentralizou.current = true;
       instancia.easeTo({ center: [posicao.lng, posicao.lat], zoom: 15 });
     }
-  }, [posicao]);
+  }, [posicao, versao]);
 
   useEffect(() => {
     const instancia = mapa.current;
@@ -89,7 +159,7 @@ export default function Mapa({ posicao, pontos = [], recentralizarToken = 0 }: P
         .setLngLat([ponto.lng, ponto.lat])
         .addTo(instancia);
     });
-  }, [pontos]);
+  }, [pontos, versao]);
 
   useEffect(() => {
     if (!recentralizarToken || !mapa.current || !posicao) return;
