@@ -23,13 +23,13 @@ const CORES: Record<PontoMapa["cor"], string> = {
 };
 
 /**
- * Basemap escuro: estilo vetorial "dark" do OpenFreeMap, gratuito e sem chave
- * de API. Os tiles da CARTO que estavam aqui antes, sem chave, eram entregues
- * quase pretos, sem nomes de rua e com marca d'água — por isso o mapa parecia
- * um retângulo preto. O OpenFreeMap mantém ruas, rótulos e pontos de
- * referência legíveis, em tom escuro.
+ * Basemap claro: estilo vetorial "bright" do OpenFreeMap, gratuito e sem chave
+ * de API. Foi o estilo claro do OpenFreeMap com os nomes de rua de maior
+ * contraste no teste lado a lado com "liberty" e "positron" (este último quase
+ * invisível no celular), então ruas, nomes e pontos de referência ficam
+ * legíveis.
  */
-const ESTILO = "https://tiles.openfreemap.org/styles/dark";
+const ESTILO = "https://tiles.openfreemap.org/styles/bright";
 
 
 
@@ -103,7 +103,7 @@ export default function Mapa({ posicao, pontos = [], recentralizarToken = 0 }: P
   // preenche 100% dele.
   return (
     <div className="absolute inset-0">
-      <div ref={container} className="mapa-monocromatico h-full w-full" />
+      <div ref={container} className="h-full w-full" />
     </div>
   );
 }

@@ -134,14 +134,9 @@
 }
 
 /*
- * Mapa escuro monocromático, estilo Uber.
- * O basemap (Dark Matter) já chega escuro, então aqui só tiramos o resto de
- * cor e damos um leve realce: ruas, nomes de rua e pontos de referência ficam
- * legíveis e o fundo continua quase preto, combinando com a identidade do app.
- * Nada de invert — aplicado sobre um mapa escuro ele clareia o fundo e apaga o
- * contraste entre ruas e quarteirões.
+ * O filtro grayscale/brightness que existia aqui era um ajuste para o basemap
+ * escuro. Sobre o basemap claro ele tirava as cores do mapa, apagava os nomes
+ * de rua e baixava o contraste, então foi removido: o estilo claro do
+ * OpenFreeMap já é entregue pronto para leitura, sem filtro nenhum.
  */
-.mapa-monocromatico canvas {
-  filter: grayscale(1) brightness(1.35) contrast(1.05);
-}
 
