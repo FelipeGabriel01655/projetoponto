@@ -22,22 +22,15 @@ const CORES: Record<PontoMapa["cor"], string> = {
   cinza: "#8a8a8a",
 };
 
-const ESTILO: maplibregl.StyleSpecification = {
-  version: 8,
-  sources: {
-    base: {
-      type: "raster",
-      tiles: [
-        "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
-        "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
-        "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
-      ],
-      tileSize: 256,
-      attribution: "© OpenStreetMap © CARTO",
-    },
-  },
-  layers: [{ id: "base", type: "raster", source: "base" }],
-};
+/**
+ * Basemap escuro: estilo vetorial "Dark Matter" da CARTO, que funciona sem
+ * chave de API. Os tiles raster `dark_all` que estavam aqui antes, sem chave,
+ * são entregues quase pretos, sem nomes de rua e com marca d'água — por isso o
+ * mapa parecia um retângulo preto. O estilo vetorial mantém ruas, rótulos e
+ * pontos de referência legíveis, em tom escuro.
+ */
+const ESTILO = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+
 
 
 export default function Mapa({ posicao, pontos = [], recentralizarToken = 0 }: Props) {
