@@ -97,5 +97,13 @@ export default function Mapa({ posicao, pontos = [], recentralizarToken = 0 }: P
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recentralizarToken]);
 
-  return <div ref={container} className="mapa-monocromatico absolute inset-0" />;
+  // O CSS da maplibre define `.maplibregl-map { position: relative }`, o que
+  // anulava o `absolute inset-0` do container e o deixava com altura 0 (mapa
+  // invisível). Por isso o posicionamento fica no wrapper e o container só
+  // preenche 100% dele.
+  return (
+    <div className="absolute inset-0">
+      <div ref={container} className="mapa-monocromatico h-full w-full" />
+    </div>
+  );
 }
