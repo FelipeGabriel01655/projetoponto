@@ -12,4 +12,13 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  vite: {
+    optimizeDeps: {
+      // maplibre-gl cria o worker a partir de dist/maplibre-gl-worker.mjs via
+      // import.meta.url. Quando o Vite empacota a biblioteca no otimizador de
+      // dependências, esse arquivo deixa de existir e o mapa nunca chega a
+      // carregar (tela preta). Servimos a biblioteca sem otimizar.
+      exclude: ["maplibre-gl"],
+    },
+  },
 });
