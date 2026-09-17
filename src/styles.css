@@ -133,8 +133,16 @@
   border: 1px solid var(--border);
 }
 
-/* Mapa em tons de preto e cinza, alinhado à identidade visual */
+/*
+ * Mapa escuro legível.
+ * O basemap do CARTO já vem em tons de cinza quase preto, então aqui apenas
+ * realçamos o brilho do canvas: ruas, quadras e rótulos ficam visíveis e o
+ * fundo continua escuro, combinando com a identidade do app.
+ * O invert anterior é removido de propósito — aplicado sobre tiles que já são
+ * escuros ele destrói o contraste entre ruas e fundo (e ainda inverte o mapa
+ * inteiro, incluindo o texto).
+ */
 .mapa-monocromatico canvas {
-  filter: grayscale(1) invert(0.92) contrast(1.05) brightness(0.95);
+  filter: grayscale(1) brightness(2.8);
 }
 
