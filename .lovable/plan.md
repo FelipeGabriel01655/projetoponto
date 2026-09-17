@@ -1,47 +1,49 @@
-# Diagnóstico: mapa fica branco com apenas o ponto vermelho
+# Diagnóstico: mapa em branco depois do F5
 
-Nenhum código, estilo, provedor ou funcionalidade foi alterado. Abaixo, o que foi medido e a conclusão.
+Nenhum código, estilo, provedor ou funcionalidade foi alterado.
 
-## Evidências coletadas
+## O que foi medido
 
-| Verificação | Resultado |
-| --- | --- |
-| URL do estilo carregada | `https://tiles.openfreemap.org/styles/bright` — HTTP 200, 48 KB, 119 camadas |
-| JSON do estilo | Válido; fontes: raster `ne2_shaded` + vetorial `openmaptiles` (`/planet`) |
-| Fonte vetorial (TileJSON) | `https://tiles.openfreemap.org/planet` — HTTP 200, aponta para `.../planet/20260913_164504_pt/{z}/{x}/{y}.pbf` |
-| Tile vetorial de amostra | HTTP 200, 9 KB, `application/vnd.mapbox-vector-tile` |
-| Sprites | `sprites/ofm_f384/ofm.json` — HTTP 200 |
-| Glyphs (fontes de texto) | `fonts/Noto Sans Regular/0-255.pbf` — HTTP 200 |
-| Requisições no preview | 13 respostas do OpenFreeMap, **nenhuma diferente de 200**, nenhum bloqueio |
-| Filtro/opacidade/overlay | `filter: none`, `opacity: 1`, nenhum elemento por cima |
-| Tamanho da tela de desenho | 432×764 (ocupa a área toda), marcador posicionado no centro (207, 373) |
-| Erros no console | Nenhum erro. Só avisos: WebGL por software no ambiente de teste e um filtro de camada de placas de rodovia dos EUA |
+Rodei o **componente de mapa real do app**, dentro do app em execução, três vezes: primeira abertura, F5 e segundo F5. Em cada ciclo capturei rede, console, estado do canvas e do WebGL, e uma captura de tela.
 
-Rodando o **próprio componente de mapa do app** dentro do app em execução, o mapa apareceu completo: ruas, nomes ("Avenida Radial Leste-Oeste", "Rua Tabatinguera", "Largo Pateo Do Colégio"), estações, parques e o ponto vermelho no lugar certo. Captura: `/tmp/browser/diag2/app3.png`.
+| Medição | 1ª abertura | Após F5 | Após 2º F5 |
+| --- | --- | --- | --- |
+| Estilo `bright` (openfreemap) | 1 requisição, 200 | 1, 200 | 1, 200 |
+| Índice de tiles (`/planet`) | 1, 200 | 1, 200 | 1, 200 |
+| Tiles vetoriais (`.pbf`) | 4, 200 | 4, 200 | 4, 200 |
+| Fontes (glyphs) | 3, 200 | 3, 200 | 3, 200 |
+| Sprites/ícones | 2, 200 | 2, 200 | 2, 200 |
+| Respostas com erro (≥400) | nenhuma | nenhuma | nenhuma |
+| Requisições bloqueadas / CORS | nenhuma | nenhuma | nenhuma |
+| Erro de CSS da biblioteca (404 antigo) | não ocorre mais | não ocorre | não ocorre |
+| Contexto gráfico (WebGL) perdido | não | não | não |
+| Canvas | 432×600, filtro `none` | igual | igual |
+| Marcador vermelho | 1, no lugar | 1 | 1 |
+| Erros no console | nenhum | nenhum | nenhum |
+| Ruas e nomes na captura | sim | sim | sim |
 
-Também deixei um mapa rodando 30 segundos com zoom e deslocamento contínuos: nenhuma perda de contexto gráfico, tiles sempre carregados.
+Avisos (inofensivos, iguais nos três ciclos): WebGL por software no ambiente de teste e três filtros de camadas de placas de rodovia dos EUA.
 
-## Conclusão
+Capturas: `/tmp/browser/diag3/x_first.png`, `x_reload1.png`, `x_reload2.png` — visualmente idênticas, com "Rua Tabatinguera", "Largo Pateo Do Colégio", "Avenida Da Liberdade", "Sé" e o ponto vermelho centrado.
 
-O provedor, o estilo, os tiles, as fontes e os ícones estão 100% saudáveis, e não há CSS, filtro ou sobreposição escondendo camadas. O desenho do mapa em si funciona.
+## Limitação importante desta medição
 
-Como o sintoma é "funcionou por alguns instantes e depois ficou branco só com o ponto vermelho", a causa está no **ciclo de vida do desenho na sua sessão**, não nos dados: o ponto vermelho é um elemento HTML comum (continua visível mesmo quando a tela de desenho morre), enquanto ruas e nomes só existem dentro da tela de desenho acelerada por GPU. Dois fatores concretos encontrados no ambiente sustentam isso:
+A tela inicial exige login, e **este projeto não tem backend (Lovable Cloud) ativo neste ambiente**: qualquer acesso a `/` é redirecionado para `/auth`, e não consegui criar uma sessão de teste. Por isso o mapa foi medido com o componente real, mas **fora da Home**, sem os cards, indicadores, atualização de GPS e as consultas de corridas que rodam em volta dele.
 
-1. **Perda do contexto gráfico (WebGL) sem recuperação.** O componente não escuta o evento de perda de contexto nem recria o mapa. Quando o navegador descarta o contexto (comum em celular, aba em segundo plano, memória baixa ou vários mapas abertos), o fundo fica branco e só os marcadores HTML permanecem — exatamente o que você viu. Não consegui reproduzir isso à força no ambiente de teste, então essa é a hipótese mais forte, ainda não confirmada na sua sessão.
-2. **Folha de estilo da biblioteca de mapas com 404 intermitente no preview.** O log do servidor de desenvolvimento registra três vezes:
-   `The file does not exist at ".../node_modules/.vite/deps/maplibre-gl.css?direct"`.
-   Confirmei: essa URL responde **404**. A biblioteca está fora do otimizador (`optimizeDeps.exclude`), mas o CSS dela continua sendo resolvido para a pasta do otimizador. Depois de um recarregamento automático do preview, o mapa pode ficar sem esse CSS, e aí a área do mapa perde posicionamento/recorte.
+Os registros do seu preview (console, erros e rede) chegaram **vazios** nesta mensagem, então também não tenho evidência da sua sessão.
 
-## Correção recomendada (não aplicada)
+Conclusão honesta: **não consegui reproduzir a falha** e, com o que medi, não é possível apontar causa raiz. O que ficou descartado: provedor, estilo `bright`, tiles, fontes, sprites, CORS, worker, CSS da biblioteca e perda de contexto gráfico — todos saudáveis e idênticos antes e depois do reload.
 
-Somente no código do mapa, sem tocar em provedor, estilo, localização, zoom, layout, cards ou indicadores:
+## Hipóteses ainda em aberto (não confirmadas)
 
-1. Tratar a perda de contexto: escutar `webglcontextlost`/`webglcontextrestored` na tela de desenho e recriar o mapa preservando centro e zoom; adicionar também um `resize` ao voltar para a aba.
-2. Resolver o 404 do CSS da biblioteca: importar a folha de estilo por um caminho que não passe pelo otimizador (ou incluir o CSS no `optimizeDeps`), eliminando o aviso do servidor.
-3. Opcional, para confirmar em campo: registrar no console os eventos de erro do mapa e de perda de contexto, para que uma próxima ocorrência fique documentada.
+1. **Algo que só existe na Home.** Após o F5, a Home volta a montar tudo ao mesmo tempo (perfil, GPS, corridas). Uma nova montagem do mapa logo após a primeira, ou uma remontagem causada por mudança de estado, pode deixar um mapa "morto" na tela enquanto o marcador (que é HTML comum) continua visível.
+2. **Ambiente do seu navegador.** WebGL por software, memória baixa ou vários mapas ao mesmo tempo podem gerar o mesmo sintoma; o app hoje só se recupera quando o navegador avisa a perda de contexto, não quando o desenho falha em silêncio.
+3. **Cache do navegador após reload** servindo o estilo do cache em um momento em que o mapa ainda não tem tamanho — não observado aqui, mas não descartável no seu aparelho.
 
-## Como reproduzir as medições
+## Próximo passo sugerido (nada será feito sem sua autorização)
 
-- Verificação de rede do provedor: requisições diretas a estilo, `/planet`, tile `.pbf`, sprite e glyph.
-- Render do componente real do app dentro do app em execução, com captura de rede, console e estilos computados.
-- Teste de estresse de 30 segundos com zoom/pan monitorando `isContextLost()`, `isStyleLoaded()` e `areTilesLoaded()`.
+Para transformar hipótese em causa confirmada, o caminho mais curto é conseguir reproduzir na Home real. Preciso de uma destas coisas:
+
+- ativar o backend (Lovable Cloud) neste ambiente para eu logar e testar a Home de verdade; ou
+- você reproduzir o problema e me mandar: aparelho/navegador, se acontece em todo F5 ou às vezes, e o que aparece no console nesse momento; ou
+- autorizar apenas um registro temporário de diagnóstico no mapa (log de montagem/desmontagem e de falha de desenho), para que a próxima ocorrência fique documentada.
