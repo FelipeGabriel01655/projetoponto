@@ -23,13 +23,13 @@ const CORES: Record<PontoMapa["cor"], string> = {
 };
 
 /**
- * Basemap escuro: estilo vetorial "Dark Matter" da CARTO, que funciona sem
- * chave de API. Os tiles raster `dark_all` que estavam aqui antes, sem chave,
- * são entregues quase pretos, sem nomes de rua e com marca d'água — por isso o
- * mapa parecia um retângulo preto. O estilo vetorial mantém ruas, rótulos e
- * pontos de referência legíveis, em tom escuro.
+ * Basemap escuro: estilo vetorial "dark" do OpenFreeMap, gratuito e sem chave
+ * de API. Os tiles da CARTO que estavam aqui antes, sem chave, eram entregues
+ * quase pretos, sem nomes de rua e com marca d'água — por isso o mapa parecia
+ * um retângulo preto. O OpenFreeMap mantém ruas, rótulos e pontos de
+ * referência legíveis, em tom escuro.
  */
-const ESTILO = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const ESTILO = "https://tiles.openfreemap.org/styles/dark";
 
 
 
