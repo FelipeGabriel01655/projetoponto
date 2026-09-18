@@ -29,7 +29,7 @@ export function PainelCorrida({ corrida, onFinalizada }: Props) {
   const arrasto = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
 
   useEffect(() => {
-    setPagamento(null);
+    setDeslocamento({ x: 0, y: 0 });
   }, [corrida.id]);
 
   function aoPressionar(evento: React.PointerEvent) {
