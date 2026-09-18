@@ -122,13 +122,8 @@ export function PainelCorrida({ corrida, onFinalizada }: Props) {
 
           <div className="space-y-3">
             {corrida.tipo === "passageiro" ? (
-              <FluxoPassageiro
-                corrida={corrida}
-                salvando={salvando}
-                pagamento={pagamento}
-                setPagamento={setPagamento}
-                mudar={mudar}
-              />
+              <FluxoPassageiro corrida={corrida} salvando={salvando} mudar={mudar} />
+
             ) : (
               <FluxoEntrega corrida={corrida} salvando={salvando} mudar={mudar} />
             )}
@@ -144,83 +139,30 @@ type Mudar = (status: Corrida["status"], extra?: Record<string, unknown>) => Pro
 function FluxoPassageiro({
   corrida,
   salvando,
-  pagamento,
-  setPagamento,
   mudar,
 }: {
   corrida: Corrida;
   salvando: boolean;
-  pagamento: FormaPagamento | null;
-  setPagamento: (valor: FormaPagamento) => void;
   mudar: Mudar;
 }) {
-  const espera = useContagemRegressiva(
-    corrida.status === "chegou_origem" ? corrida.updated_at : null,
-    ESPERA_PASSAGEIRO_SEGUNDOS,
-  );
-
-  if (corrida.status === "a_caminho") {
-    return <Acao rotulo="Cheguei na origem" onClick={() => mudar("chegou_origem")} carregando={salvando} />;
-  }
-
-  if (corrida.status === "chegou_origem") {
+  // Primeiro estágio: apenas "Chegada ao destino de origem".
+  if (corrida.status === "a_caminho" || corrida.status === "chegou_origem") {
     return (
-      <>
-        <Cronometro texto={espera.texto} descricao="Tempo de espera do passageiro" />
-        <Acao
-          rotulo="Iniciar corrida"
-          onClick={() => mudar("em_andamento", { iniciada_em: new Date().toISOString() })}
-          carregando={salvando}
-        />
-        <Acao
-          variante="secondary"
-          rotulo={espera.terminou ? "Registrar ausência e encerrar" : "Passageiro não apareceu"}
-          desabilitado={!espera.terminou}
-          carregando={salvando}
-          onClick={() =>
-            mudar("finalizada", {
-              ausencia: true,
-              valor: 0,
-              finalizada_em: new Date().toISOString(),
-            })
-          }
-        />
-      </>
+      <Acao
+        rotulo="Chegada ao destino de origem"
+        onClick={() => mudar("em_andamento", { iniciada_em: new Date().toISOString() })}
+        carregando={salvando}
+      />
     );
   }
 
   if (corrida.status === "em_andamento") {
     return (
-      <>
-        <p className="text-sm font-semibold">Forma de pagamento recebida</p>
-        <div className="grid grid-cols-2 gap-3">
-          {(["pix", "dinheiro"] as const).map((opcao) => (
-            <button
-              key={opcao}
-              type="button"
-              onClick={() => setPagamento(opcao)}
-              className={`h-11 rounded-xl border text-sm font-bold ${
-                pagamento === opcao
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-secondary"
-              }`}
-            >
-              {opcao === "pix" ? "Pix" : "Dinheiro"}
-            </button>
-          ))}
-        </div>
-        <Acao
-          rotulo="Corrida finalizada"
-          desabilitado={!pagamento}
-          carregando={salvando}
-          onClick={() =>
-            mudar("finalizada", {
-              forma_pagamento: pagamento,
-              finalizada_em: new Date().toISOString(),
-            })
-          }
-        />
-      </>
+      <Acao
+        rotulo="Corrida finalizada"
+        carregando={salvando}
+        onClick={() => mudar("finalizada", { finalizada_em: new Date().toISOString() })}
+      />
     );
   }
 
