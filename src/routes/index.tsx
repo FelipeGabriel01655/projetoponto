@@ -42,7 +42,6 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { usuarioId } = useSessao();
   const { data: perfil } = usePerfilMotoboy(usuarioId);
