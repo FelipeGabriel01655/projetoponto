@@ -7,13 +7,11 @@ import { atualizarStatus } from "@/features/corridas/api";
 import { useContagemRegressiva } from "@/features/corridas/hooks";
 import {
   ESPERA_DESTINATARIO_SEGUNDOS,
-  ESPERA_PASSAGEIRO_SEGUNDOS,
   STATUS_LABEL,
   TAXA_RETORNO,
   formatarBRL,
   valorTotal,
   type Corrida,
-  type FormaPagamento,
 } from "@/features/corridas/types";
 import { notificar } from "@/features/notificacoes/alertas";
 
@@ -27,7 +25,6 @@ export function PainelCorrida({ corrida, onFinalizada }: Props) {
   const queryClient = useQueryClient();
   const [salvando, setSalvando] = useState(false);
   const [minimizado, setMinimizado] = useState(false);
-  const [pagamento, setPagamento] = useState<FormaPagamento | null>(null);
   const [deslocamento, setDeslocamento] = useState({ x: 0, y: 0 });
   const arrasto = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
 
