@@ -124,9 +124,10 @@ function Home() {
   async function aceitar(corridaId: string) {
     setAceitando(true);
     try {
-      const corrida = await aceitarCorrida(corridaId);
+      await aceitarCorrida(corridaId);
       toast.success("Corrida aceita!");
-      await navigate({ to: "/corrida/$id", params: { id: corrida.id } });
+      await queryClient.invalidateQueries({ queryKey: ["corrida-ativa"] });
+      void queryClient.invalidateQueries({ queryKey: ["corridas-disponiveis"] });
     } catch (falha) {
       const mensagem = falha instanceof Error ? falha.message : "";
       if (mensagem.includes(ERRO_CORRIDA_INDISPONIVEL)) {
@@ -140,6 +141,7 @@ function Home() {
       setAceitando(false);
     }
   }
+
 
   const solicitacao = disponiveis.find((corrida) => !recusadas.includes(corrida.id));
   const pontos = solicitacao
