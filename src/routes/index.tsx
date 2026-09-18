@@ -1,19 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { createFileRoute, redirect, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, redirect, Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { Crosshair, LoaderCircle, Navigation, UserRound } from "lucide-react";
+import { Crosshair, LoaderCircle, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { MapaTelaCheia } from "@/components/mapa/MapaTelaCheia";
 import { CardSolicitacao } from "@/components/corridas/CardSolicitacao";
+import { PainelCorrida } from "@/components/corridas/PainelCorrida";
 import { useGeolocalizacao } from "@/features/localizacao/useGeolocalizacao";
 import { useSessao, usePerfilMotoboy, useAtualizarMotoboy } from "@/features/motoboy/useMotoboy";
 import { garantirPerfil } from "@/features/motoboy/garantirPerfil";
 import { useCorridaAtiva, useCorridasDisponiveis, useGanhosDoDia } from "@/features/corridas/hooks";
 import { aceitarCorrida, ERRO_CORRIDA_INDISPONIVEL } from "@/features/corridas/api";
 import { liberarAudio, notificar, pedirPermissaoNotificacao } from "@/features/notificacoes/alertas";
-import { formatarBRL, STATUS_LABEL } from "@/features/corridas/types";
+import { formatarBRL } from "@/features/corridas/types";
+
 
 export const Route = createFileRoute("/")({
   ssr: false,
@@ -40,7 +42,6 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { usuarioId } = useSessao();
   const { data: perfil } = usePerfilMotoboy(usuarioId);
@@ -124,9 +125,10 @@ function Home() {
   async function aceitar(corridaId: string) {
     setAceitando(true);
     try {
-      const corrida = await aceitarCorrida(corridaId);
+      await aceitarCorrida(corridaId);
       toast.success("Corrida aceita!");
-      await navigate({ to: "/corrida/$id", params: { id: corrida.id } });
+      await queryClient.invalidateQueries({ queryKey: ["corrida-ativa"] });
+      void queryClient.invalidateQueries({ queryKey: ["corridas-disponiveis"] });
     } catch (falha) {
       const mensagem = falha instanceof Error ? falha.message : "";
       if (mensagem.includes(ERRO_CORRIDA_INDISPONIVEL)) {
@@ -140,6 +142,7 @@ function Home() {
       setAceitando(false);
     }
   }
+
 
   const solicitacao = disponiveis.find((corrida) => !recusadas.includes(corrida.id));
   const pontos = solicitacao
@@ -198,20 +201,15 @@ function Home() {
         )}
 
         {corridaAtiva ? (
-          <Link
-            to="/corrida/$id"
-            params={{ id: corridaAtiva.id }}
-            className="glass-panel flex items-center justify-between rounded-2xl p-4"
-          >
-            <div>
-              <p className="text-[11px] uppercase tracking-widest text-muted-foreground">
-                {corridaAtiva.tipo === "passageiro" ? "Corrida de passageiro" : "Entrega"}
-              </p>
-              <p className="text-lg font-bold">{STATUS_LABEL[corridaAtiva.status]}</p>
-            </div>
-            <Navigation className="size-6 text-primary" />
-          </Link>
+          <PainelCorrida
+            corrida={corridaAtiva}
+            onFinalizada={() => {
+              void queryClient.invalidateQueries({ queryKey: ["corrida-ativa"] });
+              void queryClient.invalidateQueries({ queryKey: ["corridas-disponiveis"] });
+            }}
+          />
         ) : (
+
           <div className="glass-panel rounded-2xl p-4">
             <div className="mb-3 flex items-center gap-2">
               <span
